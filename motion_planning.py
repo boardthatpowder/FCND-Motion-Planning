@@ -46,7 +46,7 @@ class MotionPlanning(Drone):
 
     def local_position_callback(self):
         if self.flight_state == States.TAKEOFF:
-            print('local_position: {}, target_position: {}'.format(self.local_position, self.target_position))
+            # print('local_position: {}, target_position: {}'.format(self.local_position, self.target_position))
             if -1.0 * self.local_position[2] > 0.95 * self.target_position[2]:
                 self.waypoint_transition()
         elif self.flight_state == States.WAYPOINT:
@@ -64,7 +64,7 @@ class MotionPlanning(Drone):
                     self.disarming_transition()
 
     def state_callback(self):
-        print('state_callback: flight_state: {}'.format(self.flight_state))
+        # print('state_callback: flight_state: {}'.format(self.flight_state))
         if self.in_mission:
             if self.flight_state == States.MANUAL:
                 self.arming_transition()
@@ -78,39 +78,42 @@ class MotionPlanning(Drone):
                     self.manual_transition()
 
     def arming_transition(self):
-        self.flight_state = States.ARMING
         print("arming transition")
-        self.arm()
         self.take_control()
+        self.arm()
+        self.set_home_position(self.global_position[0], self.global_position[1],
+                               self.global_position[2])  # set the current location to be the home position
+        self.flight_state = States.ARMING
+
 
     def takeoff_transition(self):
-        self.flight_state = States.TAKEOFF
-        print("takeoff transition")
+        print("takeoff transition: target_position: {}".format(self.target_position))
         self.takeoff(self.target_position[2])
+        self.flight_state = States.TAKEOFF
 
     def waypoint_transition(self):
-        self.flight_state = States.WAYPOINT
         print("waypoint transition")
         self.target_position = self.waypoints.pop(0)
         print('target position', self.target_position)
         self.cmd_position(self.target_position[0], self.target_position[1], self.target_position[2], self.target_position[3])
+        self.flight_state = States.WAYPOINT
 
     def landing_transition(self):
-        self.flight_state = States.LANDING
         print("landing transition")
         self.land()
+        self.flight_state = States.LANDING
 
     def disarming_transition(self):
-        self.flight_state = States.DISARMING
         print("disarm transition")
         self.disarm()
         self.release_control()
+        self.flight_state = States.DISARMING
 
     def manual_transition(self):
-        self.flight_state = States.MANUAL
         print("manual transition")
         self.stop()
         self.in_mission = False
+        self.flight_state = States.MANUAL
 
     def send_waypoints(self):
         print("Sending waypoints to simulator ...")
@@ -120,7 +123,7 @@ class MotionPlanning(Drone):
     def plan_path(self):
         self.flight_state = States.PLANNING
         print("Searching for a path ...")
-        TARGET_ALTITUDE = 3
+        TARGET_ALTITUDE = 10
         SAFETY_DISTANCE = 5
 
         self.target_position[2] = TARGET_ALTITUDE
@@ -168,6 +171,10 @@ class MotionPlanning(Drone):
         grid_start = (int(np.ceil(n_loc - north_offset)), int(np.ceil(e_loc - east_offset)))
         graph_start = closest_point(G, grid_start)
         print('grid_start: {}, graph_start: {}'.format(grid_start, graph_start))
+
+        # # redefine home so that the drone does not spawn inside a building
+        # lat1, lon1, alt1 = local_to_global((grid_start[0], grid_start[1], 0.), self.global_home)
+        # self.set_home_position(lon1, lat1, alt1)
         
         # Set goal as some arbitrary position on the grid
         # DONE: adapt to set goal as latitude / longitude position and convert
@@ -192,7 +199,7 @@ class MotionPlanning(Drone):
         # TODO (if you're feeling ambitious): Try a different approach altogether!
 
         # Convert path to waypoints
-        waypoints = [[p[0] + north_offset, p[1] + east_offset, TARGET_ALTITUDE, 0] for p in pruned_path]
+        waypoints = [[int(p[0] + north_offset), int(p[1] + east_offset), TARGET_ALTITUDE, 0] for p in pruned_path]
         print('waypoints: {}'.format(waypoints))
         
         # Set self.waypoints

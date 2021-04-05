@@ -181,7 +181,7 @@ def a_star(graph, h, start, goal):
         else:              
             current_cost = branch[current_node][0]
             
-        print('current_node: {}, goal: {}'.format(current_node, goal))
+        # print('current_node: {}, goal: {}'.format(current_node, goal))
         if current_node == goal:        
             print('Found a path.')
             found = True
@@ -238,7 +238,7 @@ def closest_point(graph, current_point):
 
     return closest_point
 
-def collinearity_check(p1, p2, p3, epsilon=1e-6):   
+def collinearity_check(p1, p2, p3, epsilon=1e-3):   
     m = np.concatenate((p1, p2, p3), 0)
     det = np.linalg.det(m)
     return abs(det) < epsilon
